@@ -21,6 +21,7 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "@blackbox_ai/ai-logs-watcher": "^0.1.5",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
     "pino": "^9.9.5",

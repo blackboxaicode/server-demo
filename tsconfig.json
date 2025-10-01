@@ -8,7 +8,7 @@
     "allowJs": true,
 
     // Node.js mode
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "outDir": "./",
     "rootDir": "./",
     "esModuleInterop": true,

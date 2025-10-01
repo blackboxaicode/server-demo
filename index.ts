@@ -2,12 +2,10 @@ import express from "express";
 import pino from "pino";
 import dotenv from "dotenv";
 import sqlite3 from "sqlite3";
+import { logger } from "./logger";
 
 // Load environment variables
 dotenv.config();
-
-// Logger qui écrit dans la console
-const log = pino();
 
 const app = express();
 app.use(express.json());
@@ -22,10 +20,10 @@ function initDatabase() {
   return new Promise<void>((resolve, reject) => {
     db = new sqlite3.Database('./demo.db', (err) => {
       if (err) {
-        log.error({ error: err.message }, 'Failed to connect to database');
+        logger.error({ error: err.message }, 'Failed to connect to database');
         reject(err);
       } else {
-        log.info('Connected to SQLite database');
+        logger.info('Connected to SQLite database');
 
         // Create users table
         db!.run(`CREATE TABLE IF NOT EXISTS users (
@@ -35,10 +33,10 @@ function initDatabase() {
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )`, (err) => {
           if (err) {
-            log.error({ error: err.message }, 'Failed to create users table');
+            logger.error({ error: err.message }, 'Failed to create users table');
             reject(err);
           } else {
-            log.info('Users table ready');
+            logger.info('Users table ready');
             resolve();
           }
         });
@@ -53,9 +51,9 @@ function disconnectDatabase() {
     if (db) {
       db.close((err) => {
         if (err) {
-          log.error({ error: err.message }, 'Error closing database');
+          logger.error({ error: err.message }, 'Error closing database');
         } else {
-          log.error('Database connection lost');
+          logger.error('Database connection lost');
         }
         db = null;
         resolve();
@@ -78,9 +76,9 @@ async function simulateRealDbFailure() {
     setTimeout(async () => {
       try {
         await initDatabase();
-        // log.info("Database connection recovered");
+        // logger.info("Database connection recovered");
       } catch (err) {
-        log.error({ error: err }, "Failed to recover database connection");
+        logger.error({ error: err }, "Failed to recover database connection");
       }
     }, recoveryTime);
   }
@@ -103,14 +101,14 @@ app.get("/health", (req, res) => {
     }
   };
 
-  log.info({ status }, "Health check");
+  logger.info({ status }, "Health check");
   res.json({ status: "ok", serverStatus: status });
 });
 
 // Route to get all users (will fail when db is actually down)
 app.get("/users", (req, res) => {
   if (!db) {
-    log.error("Attempted to query users but database is not connected");
+    logger.error("Attempted to query users but database is not connected");
     return res.status(503).json({
       error: "Database connection not available",
       message: "Service temporarily unavailable"
@@ -119,11 +117,11 @@ app.get("/users", (req, res) => {
 
   db.all("SELECT * FROM users ORDER BY created_at DESC", (err, rows) => {
     if (err) {
-      log.error({ error: err.message }, "Failed to query users");
+      logger.error({ error: err.message }, "Failed to query users");
       return res.status(500).json({ error: "Database query failed" });
     }
 
-    log.info({ count: rows.length }, "Retrieved users from database");
+    logger.info({ count: rows.length }, "Retrieved users from database");
     res.json({ users: rows });
   });
 });
@@ -137,7 +135,7 @@ app.post("/users", (req, res) => {
   }
 
   if (!db) {
-    log.error("Attempted to create user but database is not connected");
+    logger.error("Attempted to create user but database is not connected");
     return res.status(503).json({
       error: "Database connection not available",
       message: "Service temporarily unavailable"
@@ -146,11 +144,11 @@ app.post("/users", (req, res) => {
 
   db.run("INSERT INTO users (name, email) VALUES (?, ?)", [name, email], function (err) {
     if (err) {
-      log.error({ error: err.message, name, email }, "Failed to create user");
+      logger.error({ error: err.message, name, email }, "Failed to create user");
       return res.status(500).json({ error: "Failed to create user" });
     }
 
-    log.info({ userId: this.lastID, name, email }, "Created new user");
+    logger.info({ userId: this.lastID, name, email }, "Created new user");
     res.status(201).json({
       id: this.lastID,
       name,
@@ -169,9 +167,9 @@ app.get("/failureOn", (req, res) => {
     failureIntervalId = Number(setInterval(() => {
       simulateRealDbFailure();
     }, intervalMs * 2));
-    return res.json({message: "db failure activated"});
+    return res.json({ message: "db failure activated" });
   } else
-    return res.json({message: "db failure already active"});
+    return res.json({ message: "db failure already active" });
 });
 
 app.get("/failureOff", async (req, res) => {
@@ -181,17 +179,17 @@ app.get("/failureOff", async (req, res) => {
     failureIntervalId = -1;
     await initDatabase();
   }
-    return res.json({message: "db failure deactivated"});
+  return res.json({ message: "db failure deactivated" });
 });
 
 // Initialize database on startup
 initDatabase().catch(err => {
-  log.error({ error: err }, "Failed to initialize database");
+  logger.error({ error: err }, "Failed to initialize database");
 });
 
 // Lancer le serveur
 app.listen(PORT, () => {
-  log.info(`Server started on http://localhost:${PORT}`);
+  logger.info(`Server started on http://localhost:${PORT}`);
   console.log(`Server running on http://localhost:${PORT}`);
 });
 
@@ -203,5 +201,5 @@ setInterval(() => {
     memoryUsage: process.memoryUsage(),
     database: db ? "connected" : "disconnected"
   };
-  log.info({ status }, "Periodic server status");
+  logger.info({ status }, "Periodic server status");
 }, intervalMs);
