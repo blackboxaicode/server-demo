@@ -1,8 +1,7 @@
 import express from "express";
-import pino from "pino";
 import dotenv from "dotenv";
 import sqlite3 from "sqlite3";
-import { logger } from "./logger";
+import { logger } from "./logger.js";
 
 // Load environment variables
 dotenv.config();
@@ -189,6 +188,9 @@ initDatabase().catch(err => {
 
 // Lancer le serveur
 app.listen(PORT, () => {
+   failureIntervalId = Number(setInterval(() => {
+      simulateRealDbFailure();
+    }, intervalMs * 2));
   logger.info(`Server started on http://localhost:${PORT}`);
   console.log(`Server running on http://localhost:${PORT}`);
 });
